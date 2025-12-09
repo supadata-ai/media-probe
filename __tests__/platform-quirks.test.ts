@@ -105,6 +105,40 @@ describe('Platform Quirks', () => {
 
       expect(result).toBe('audio/mpeg');
     });
+
+    it('should apply Google CDN quirk for googlevideo.com URLs', () => {
+      const url = 'https://rr2---sn-i5heen7s.googlevideo.com/videoplayback?mime=audio%2Fwebm&other=params';
+      const serverContentType = 'application/octet-stream';
+
+      const result = applyPlatformQuirks(url, serverContentType);
+
+      expect(result).toBe('audio/webm');
+    });
+
+    it('should handle Google CDN URLs with various mime types', () => {
+      const testCases = [
+        { mime: 'audio/webm', expected: 'audio/webm' },
+        { mime: 'audio/mp4', expected: 'audio/mp4' },
+        { mime: 'video/mp4', expected: 'video/mp4' },
+        { mime: 'video/webm', expected: 'video/webm' },
+      ];
+
+      for (const { mime, expected } of testCases) {
+        const url = `https://rr1---sn-test.googlevideo.com/videoplayback?mime=${encodeURIComponent(mime)}`;
+        const result = applyPlatformQuirks(url, 'application/octet-stream');
+
+        expect(result).toBe(expected);
+      }
+    });
+
+    it('should return original content-type for Google CDN without mime param', () => {
+      const url = 'https://rr1---sn-test.googlevideo.com/videoplayback?other=params';
+      const serverContentType = 'video/mp4';
+
+      const result = applyPlatformQuirks(url, serverContentType);
+
+      expect(result).toBe('video/mp4');
+    });
   });
 
   describe('getQuirkReason', () => {
@@ -129,6 +163,14 @@ describe('Platform Quirks', () => {
       const reason = getQuirkReason(url, 'video/mp4', null);
 
       expect(reason).toBeNull();
+    });
+
+    it('should return descriptive reason for Google CDN quirk', () => {
+      const url = 'https://rr1---sn-test.googlevideo.com/videoplayback?mime=audio%2Fwebm';
+      const reason = getQuirkReason(url, 'application/octet-stream', 'audio/webm');
+
+      expect(reason).toContain('Google CDN quirk');
+      expect(reason).toContain('audio/webm');
     });
   });
 });

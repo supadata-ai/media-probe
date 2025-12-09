@@ -14,6 +14,14 @@ describe('isVideoContent', () => {
     expect(isVideoContent('video/quicktime', 'https://example.com/file')).toBe(true);
     expect(isVideoContent('video/x-msvideo', 'https://example.com/file')).toBe(true);
     expect(isVideoContent('video/x-matroska', 'https://example.com/file')).toBe(true);
+    expect(isVideoContent('video/mp2t', 'https://example.com/file')).toBe(true);
+  });
+
+  it('should detect any video/* MIME type', () => {
+    // Trust any video/* prefix as video content
+    expect(isVideoContent('video/unknown-format', 'https://example.com/file')).toBe(true);
+    expect(isVideoContent('video/x-custom', 'https://example.com/file')).toBe(true);
+    expect(isVideoContent('video/av1', 'https://example.com/file')).toBe(true);
   });
 
   it('should detect video file extensions', () => {
@@ -26,6 +34,8 @@ describe('isVideoContent', () => {
     expect(isVideoContent(null, 'https://example.com/video.mpg')).toBe(true);
     expect(isVideoContent(null, 'https://example.com/video.flv')).toBe(true);
     expect(isVideoContent(null, 'https://example.com/video.3gp')).toBe(true);
+    expect(isVideoContent(null, 'https://example.com/video.ts')).toBe(true);
+    expect(isVideoContent(null, 'https://example.com/video.m3u8')).toBe(true);
   });
 
   it('should handle URLs with query parameters', () => {
@@ -47,6 +57,13 @@ describe('isAudioContent', () => {
     expect(isAudioContent('audio/webm', 'https://example.com/file')).toBe(true);
     expect(isAudioContent('audio/ogg', 'https://example.com/file')).toBe(true);
     expect(isAudioContent('audio/flac', 'https://example.com/file')).toBe(true);
+  });
+
+  it('should detect any audio/* MIME type', () => {
+    // Trust any audio/* prefix as audio content
+    expect(isAudioContent('audio/unknown-format', 'https://example.com/file')).toBe(true);
+    expect(isAudioContent('audio/x-custom', 'https://example.com/file')).toBe(true);
+    expect(isAudioContent('audio/vnd.dolby.heaac.1', 'https://example.com/file')).toBe(true);
   });
 
   it('should detect audio file extensions', () => {

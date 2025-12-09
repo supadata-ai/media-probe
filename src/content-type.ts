@@ -2,15 +2,15 @@
  * Video MIME types and file extensions
  */
 const VIDEO_PATTERNS = {
-  mimeTypes: /^video\/(mp4|webm|quicktime|x-msvideo|x-matroska|ogg|mpeg|x-flv|3gpp|x-ms-wmv)$/i,
-  extensions: /\.(mp4|webm|mov|avi|mkv|ogv|mpg|mpeg|m4v|flv|3gp|wmv)(\?.*)?$/i,
+  mimeTypes: /^video\//i,
+  extensions: /\.(mp4|webm|mov|avi|mkv|ogv|mpg|mpeg|m4v|flv|3gp|wmv|ts|m3u8)(\?.*)?$/i,
 };
 
 /**
  * Audio MIME types and file extensions
  */
 const AUDIO_PATTERNS = {
-  mimeTypes: /^audio\/(mpeg|mp4|wav|webm|ogg|flac|aac|x-m4a|x-wav|x-flac)$/i,
+  mimeTypes: /^audio\//i,
   extensions: /\.(mp3|m4a|wav|webm|ogg|flac|aac|opus)(\?.*)?$/i,
 };
 

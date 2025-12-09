@@ -27,7 +27,7 @@ function extractMimeTypeFromQuery(url: string): string | null {
     const params = urlObj.searchParams;
 
     // Check common query parameter names
-    const paramNames = ['mime_type', 'mimetype', 'type', 'content_type', 'contenttype'];
+    const paramNames = ['mime_type', 'mimetype', 'mime', 'type', 'content_type', 'contenttype'];
 
     for (const paramName of paramNames) {
       const value = params.get(paramName);
@@ -64,6 +64,18 @@ function isTikTokCDN(url: string): boolean {
 }
 
 /**
+ * Checks if the URL is from Google CDN (googlevideo.com)
+ */
+function isGoogleCDN(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname.includes('googlevideo.com');
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Applies platform-specific quirks to correct known CDN misconfigurations
  *
  * @param url - The original URL
@@ -92,6 +104,15 @@ export function applyPlatformQuirks(
     }
   }
 
+  // Google CDN quirk: Always trust the 'mime' query parameter when available
+  if (isGoogleCDN(url)) {
+    const queryMimeType = extractMimeTypeFromQuery(url);
+    if (queryMimeType) {
+      // Google CDN provides accurate MIME type in the query parameter
+      return queryMimeType;
+    }
+  }
+
   // No quirks applied, return original server content-type
   return serverContentType;
 }
@@ -106,6 +127,10 @@ export function getQuirkReason(url: string, originalType: string | null, correct
 
   if (isTikTokCDN(url)) {
     return `TikTok CDN quirk: Server returned '${originalType}' but query parameter specified '${correctedType}'`;
+  }
+
+  if (isGoogleCDN(url)) {
+    return `Google CDN quirk: Using MIME type from query parameter '${correctedType}'${originalType ? ` instead of server's '${originalType}'` : ''}`;
   }
 
   return null;

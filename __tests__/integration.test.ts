@@ -140,6 +140,33 @@ describe('Integration tests with real media assets', () => {
   );
 
   it(
+    'should probe Google CDN file',
+    async () => {
+      const url =
+        'https://rr2---sn-i5heen7s.googlevideo.com/videoplayback?expire=1765166519&ei=V_k1aen6HquAkucPr7WI-AY&ip=216.195.9.105&id=o-ANDetcbkAhF7aUMmlt686S0pSV0hOkue_zlQ69ukbhiy&itag=251&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&bui=AYUSA3AvgQb877FYhqOHw_v7QYU757uu3sEXDIURMTX6t9dUXmlvFPo6EbYwNK4o7I5e6QOWX-rwppGq&spc=wH4Qq3oG_Zc3&vprv=1&svpuc=1&mime=audio%2Fwebm&rqh=1&gir=yes&clen=13857306&dur=764.681&lmt=1750624360450461&keepalive=yes&fexp=51552689,51565115,51565682,51580968&c=ANDROID&txp=5532534&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Crqh%2Cgir%2Cclen%2Cdur%2Clmt&sig=AJfQdSswRQIhAKYSq9uOARubWxuA75mfFFDG3aJCAeTm3wgZhJuA9yGhAiBjisJYHs5AjsTpZOvMack_6MrXmYPwLkb72x15xf0PIw%3D%3D&rm=sn-uvfopn2-cvne7e,sn-p5qel77e&rrc=79,104&req_id=99cb43c72332a3ee&rms=rdu,au&redirect_counter=2&cms_redirect=yes&cmsv=e&ipbypass=yes&met=1765145652,&mh=LE&mip=93.241.50.90&mm=29&mn=sn-i5heen7s&ms=rdu&mt=1765143312&mv=u&mvi=2&pl=26&lsparams=ipbypass,met,mh,mip,mm,mn,ms,mv,mvi,pl,rms&lsig=APaTxxMwRQIgRn05N5QRED5pasNO8ha4tA0wHyzL0nQV4eH6UtBCxyACIQCvtxvnuF06QSnZIkPZNHSi28X1e-RBNEBngB6Nhk21pw%3D%3D';
+
+      const result = await probeMedia(url, {
+        timeout: TIMEOUT,
+        allowPlatformQuirks: true,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.size).toBeDefined();
+      expect(result.contentType).toBeDefined();
+
+      console.log('Google CDN result:', {
+        size: result.size,
+        contentType: result.contentType,
+        isAudio: result.isAudio,
+        isVideo: result.isVideo,
+        method: result.method,
+        supportsRangeRequests: result.supportsRangeRequests,
+      });
+    },
+    { timeout: TIMEOUT }
+  );
+
+  it(
     'should handle all files efficiently with minimal data transfer',
     async () => {
       const urls = [

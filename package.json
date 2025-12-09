@@ -1,6 +1,6 @@
 {
   "name": "@supadata/media-probe",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Lightweight library for probing remote media assets to get their content type and size",
   "type": "module",
   "main": "./dist/index.js",
