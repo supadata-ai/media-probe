@@ -56,3 +56,60 @@ export class MaxRetriesExceededError extends ProbeError {
     Object.setPrototypeOf(this, MaxRetriesExceededError.prototype);
   }
 }
+
+/**
+ * Base error for HTTP client errors (4xx status codes)
+ * These errors typically indicate an issue with the request that won't be fixed by retrying
+ */
+export class ClientError extends NetworkError {
+  constructor(message: string, statusCode: number) {
+    super(message, statusCode);
+    this.name = 'ClientError';
+    Object.setPrototypeOf(this, ClientError.prototype);
+  }
+}
+
+/**
+ * Error thrown when the media resource is not found (404)
+ */
+export class NotFoundError extends ClientError {
+  constructor(url: string) {
+    super(`Media not found: ${url}`, 404);
+    this.name = 'NotFoundError';
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+}
+
+/**
+ * Error thrown when access to the media is forbidden (403)
+ */
+export class ForbiddenError extends ClientError {
+  constructor(url: string) {
+    super(`Access forbidden: ${url}`, 403);
+    this.name = 'ForbiddenError';
+    Object.setPrototypeOf(this, ForbiddenError.prototype);
+  }
+}
+
+/**
+ * Error thrown when authentication is required (401)
+ */
+export class UnauthorizedError extends ClientError {
+  constructor(url: string) {
+    super(`Unauthorized access: ${url}`, 401);
+    this.name = 'UnauthorizedError';
+    Object.setPrototypeOf(this, UnauthorizedError.prototype);
+  }
+}
+
+/**
+ * Base error for HTTP server errors (5xx status codes)
+ * These errors might be temporary and could succeed on retry
+ */
+export class ServerError extends NetworkError {
+  constructor(message: string, statusCode: number) {
+    super(message, statusCode);
+    this.name = 'ServerError';
+    Object.setPrototypeOf(this, ServerError.prototype);
+  }
+}

@@ -66,19 +66,61 @@ const result = await probeMedia(tiktokUrl, {
 
 ### Error Handling
 
+The library provides specific error types for different failure scenarios:
+
 ```typescript
-import { probeMedia, NetworkError, TimeoutError } from '@supadata/media-probe';
+import {
+  probeMedia,
+  NotFoundError,
+  ForbiddenError,
+  UnauthorizedError,
+  ClientError,
+  ServerError,
+  TimeoutError,
+} from '@supadata/media-probe';
 
 try {
   const result = await probeMedia(url);
+  console.log('Media found:', result);
 } catch (error) {
-  if (error instanceof NetworkError) {
-    console.error('Network error:', error.statusCode);
+  // Handle specific HTTP errors
+  if (error instanceof NotFoundError) {
+    console.error('Media does not exist (404)');
+  } else if (error instanceof ForbiddenError) {
+    console.error('Access forbidden (403) - check permissions');
+  } else if (error instanceof UnauthorizedError) {
+    console.error('Authentication required (401)');
+  } else if (error instanceof ClientError) {
+    console.error('Client error (4xx):', error.statusCode);
+  } else if (error instanceof ServerError) {
+    console.error('Server error (5xx):', error.statusCode, '- might be temporary');
   } else if (error instanceof TimeoutError) {
     console.error('Request timed out');
   }
 }
 ```
+
+**Error Hierarchy:**
+
+```text
+ProbeError (base)
+├── InvalidUrlError
+├── NetworkError
+│   ├── ClientError (4xx errors - won't be retried)
+│   │   ├── NotFoundError (404)
+│   │   ├── ForbiddenError (403)
+│   │   └── UnauthorizedError (401)
+│   └── ServerError (5xx errors - will be retried)
+├── TimeoutError (will be retried)
+└── MaxRetriesExceededError
+```
+
+**Retry Behavior:**
+
+- ✅ **Retried:** Server errors (5xx), timeouts, network failures
+- ❌ **Not Retried:** Client errors (4xx), invalid URLs
+
+The library intelligently tries all three methods (Range → HEAD → GET) before failing, ensuring maximum compatibility.
 
 ### Batch Processing
 
@@ -104,6 +146,7 @@ normalizeContentType('video/mp4; codecs="avc1"'); // 'video/mp4'
 Returns `Promise<ProbeResult>`
 
 **Options:**
+
 ```typescript
 interface ProbeOptions {
   maxRetries?: number;            // Default: 3
@@ -116,6 +159,7 @@ interface ProbeOptions {
 ```
 
 **Result:**
+
 ```typescript
 interface ProbeResult {
   contentType: string | null;

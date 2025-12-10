@@ -23,6 +23,11 @@ export {
   NetworkError,
   TimeoutError,
   MaxRetriesExceededError,
+  ClientError,
+  NotFoundError,
+  ForbiddenError,
+  UnauthorizedError,
+  ServerError,
 } from './errors.js';
 export {
   isVideoContent,

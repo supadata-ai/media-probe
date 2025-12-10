@@ -4,6 +4,11 @@ import {
   NetworkError,
   TimeoutError,
   MaxRetriesExceededError,
+  ClientError,
+  NotFoundError,
+  ForbiddenError,
+  UnauthorizedError,
+  ServerError,
 } from './errors.js';
 import {
   isVideoContent,
@@ -44,6 +49,39 @@ function createTimeoutController(timeout: number): AbortController {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeout);
   return controller;
+}
+
+/**
+ * Creates an appropriate error based on HTTP status code
+ */
+function createHttpError(url: string, status: number, method: string): Error {
+  if (status === 404) {
+    return new NotFoundError(url);
+  } else if (status === 403) {
+    return new ForbiddenError(url);
+  } else if (status === 401) {
+    return new UnauthorizedError(url);
+  } else if (status >= 400 && status < 500) {
+    return new ClientError(`${method} request failed with status ${status}`, status);
+  } else if (status >= 500) {
+    return new ServerError(`${method} request failed with status ${status}`, status);
+  } else {
+    return new NetworkError(`${method} request failed with status ${status}`, status);
+  }
+}
+
+/**
+ * Checks if an error should be retried
+ */
+function isRetriableError(error: Error): boolean {
+  // Retry server errors (5xx) and network errors, but not client errors (4xx)
+  return (
+    error instanceof ServerError ||
+    error instanceof TimeoutError ||
+    (error instanceof NetworkError &&
+     !(error instanceof ClientError) &&
+     !error.statusCode)
+  );
 }
 
 /**
@@ -94,6 +132,17 @@ async function probeWithRange(
       options.fetch
     );
 
+    // Check for HTTP errors that should fail immediately (no fallback)
+    if (!response.ok && response.status !== 206 && response.status !== 416) {
+      // 416 Range Not Satisfiable is expected if range requests aren't supported
+      // For other error statuses, we'll try fallback methods
+      if (response.status >= 400) {
+        // Store the error but return null to try fallback methods
+        // The error will be thrown later if all methods fail
+        return null;
+      }
+    }
+
     // Range requests should return 206 Partial Content
     if (response.status !== 206) {
       return null;
@@ -122,7 +171,12 @@ async function probeWithRange(
       method: 'range',
     };
   } catch (error) {
-    // Range request failed, will try other methods
+    // Network errors or timeouts - will try other methods
+    // But if it's a client error, we should try fallback methods first
+    if (error instanceof ClientError) {
+      return null;
+    }
+    // For other errors (network, timeout), return null to try fallback
     return null;
   }
 }
@@ -146,16 +200,14 @@ async function probeWithHead(
       options.fetch
     );
 
-    if (!response.ok && response.status !== 405) {
-      // 405 Method Not Allowed means HEAD is not supported, but other errors might be real
-      throw new NetworkError(
-        `HEAD request failed with status ${response.status}`,
-        response.status
-      );
+    // If HEAD is not allowed (405), return null to try GET
+    if (response.status === 405) {
+      return null;
     }
 
-    // If HEAD is not allowed, return null to try GET
-    if (response.status === 405) {
+    // For other non-OK statuses, return null to allow GET fallback
+    // The actual error will be thrown from GET if it also fails
+    if (!response.ok) {
       return null;
     }
 
@@ -178,13 +230,15 @@ async function probeWithHead(
       method: 'head',
     };
   } catch (error) {
-    // HEAD request failed, will try GET
+    // Network errors or timeouts - will try GET
+    // Client errors also get one more chance with GET
     return null;
   }
 }
 
 /**
  * Attempts to probe using GET request (fallback, least efficient)
+ * This is the final fallback method, so it throws errors instead of returning null
  */
 async function probeWithGet(
   url: string,
@@ -204,11 +258,9 @@ async function probeWithGet(
     options.fetch
   );
 
-  if (!response.ok) {
-    throw new NetworkError(
-      `GET request failed with status ${response.status}`,
-      response.status
-    );
+  // GET is our last resort, so throw specific errors here
+  if (!response.ok && response.status !== 206) {
+    throw createHttpError(url, response.status, 'GET');
   }
 
   let contentType = normalizeContentType(response.headers.get('content-type'));
@@ -295,16 +347,23 @@ export async function probeMedia(
         return headResult;
       }
 
-      // Fall back to GET request
+      // Fall back to GET request (this will throw specific errors)
       return await probeWithGet(url, mergedOptions);
     } catch (error) {
       lastError = error as Error;
 
-      // Don't retry on invalid URL or certain error types
-      if (
-        error instanceof InvalidUrlError ||
-        (error instanceof NetworkError && error.statusCode && error.statusCode < 500)
-      ) {
+      // Don't retry on invalid URL
+      if (error instanceof InvalidUrlError) {
+        throw error;
+      }
+
+      // Don't retry on client errors (4xx) - these won't be fixed by retrying
+      if (error instanceof ClientError) {
+        throw error;
+      }
+
+      // Check if this error should be retried
+      if (!isRetriableError(lastError)) {
         throw error;
       }
 
