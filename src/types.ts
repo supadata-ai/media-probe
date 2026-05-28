@@ -85,3 +85,100 @@ export interface ProbeOptions {
    */
   allowPlatformQuirks?: boolean;
 }
+
+/**
+ * Options for `extractMediaDuration`
+ */
+export interface ExtractDurationOptions {
+  /**
+   * Custom fetch function (useful for routing through a proxy that matches
+   * the egress your downstream consumer will use).
+   * @default global fetch
+   */
+  fetch?: typeof fetch;
+
+  /**
+   * Additional headers to include in Range requests.
+   */
+  headers?: Record<string, string>;
+
+  /**
+   * Timeout in milliseconds for each Range request.
+   * @default 10000
+   */
+  timeout?: number;
+
+  /**
+   * Whether to follow redirects.
+   * @default true
+   */
+  followRedirects?: boolean;
+
+  /**
+   * Bytes to fetch in the initial head Range request. The default 1 MB
+   * covers the `moov` atom for fast-start mp4, EBML SegmentInfo for webm,
+   * Xing/Info headers for mp3, and codec setup pages for ogg.
+   * @default 1048576 (1 MB)
+   */
+  headBytes?: number;
+
+  /**
+   * Bytes to fetch from the file tail as a fallback for mp4 with `moov`
+   * at the end. Skipped when `fileSize` is unknown or when the file fits
+   * inside `headBytes`.
+   * @default 524288 (512 KB)
+   */
+  tailBytes?: number;
+
+  /**
+   * Content-Type hint (from a previous probe). When provided, lets the
+   * function bail early on unparseable types without issuing a network
+   * request.
+   */
+  contentType?: string | null;
+
+  /**
+   * Known total file size (from a previous probe). Required to address
+   * the tail-Range fallback on mp4-family content.
+   */
+  fileSize?: number | null;
+}
+
+/**
+ * Result of `extractMediaDuration`
+ */
+export interface ExtractDurationResult {
+  /**
+   * Duration in seconds. `null` when extraction failed for any reason —
+   * network error, parse failure, unsupported format, or the container
+   * simply doesn't carry duration metadata (e.g. some streamed mp3s).
+   */
+  duration: number | null;
+
+  /**
+   * Container format reported by music-metadata (e.g. "MPEG-4", "Matroska",
+   * "MPEG"). `null` when parsing didn't surface enough bytes to identify it.
+   */
+  container: string | null;
+
+  /**
+   * Codec name reported by music-metadata (e.g. "MPEG-1/2 Audio Layer 3",
+   * "AAC"). `null` when not available.
+   */
+  codec: string | null;
+
+  /**
+   * Bitrate in bits per second, when the parser identified one. Useful
+   * for callers that want a size/bitrate fallback estimate when
+   * `duration` is null.
+   */
+  bitrate: number | null;
+
+  /**
+   * Which strategy succeeded:
+   *   - `'head'`: duration came from the initial head Range
+   *   - `'head+tail'`: needed an additional tail Range (mp4 moov-at-end)
+   *   - `null`: no duration could be extracted
+   */
+  method: 'head' | 'head+tail' | null;
+}

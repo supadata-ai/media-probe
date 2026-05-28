@@ -16,7 +16,13 @@
  */
 
 export { probeMedia } from './probe.js';
-export type { ProbeResult, ProbeOptions } from './types.js';
+export { extractMediaDuration } from './duration.js';
+export type {
+  ProbeResult,
+  ProbeOptions,
+  ExtractDurationOptions,
+  ExtractDurationResult,
+} from './types.js';
 export {
   ProbeError,
   InvalidUrlError,
