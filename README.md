@@ -6,11 +6,11 @@ Lightweight library for probing remote media assets to get their content type an
 
 - 🚀 **Efficient**: Uses HTTP Range requests (1 byte) when possible
 - 🔄 **Smart Fallbacks**: Range → HEAD → GET
-- 📦 **Zero Dependencies**: Pure TypeScript, native `fetch`
 - 🎯 **Type-Safe**: Full TypeScript support
 - 🔁 **Retry Logic**: Built-in exponential backoff
 - 🎬 **Media Detection**: Automatic video/audio detection
 - 🛠️ **Platform Quirks**: Handles TikTok CDN misconfigurations
+- ⏱️ **Duration Extraction**: Opt-in `extractMediaDuration()` reads container metadata via Range fetch (mp4, webm, mp3, m4a, ogg, opus, flac)
 
 ## Installation
 
@@ -171,11 +171,46 @@ interface ProbeResult {
 }
 ```
 
+### Duration Extraction
+
+`extractMediaDuration` reads container-level metadata (mp4 `moov` atom, EBML SegmentInfo, mp3 Xing/Info, etc.) by Range-fetching the file header and parsing it with [`music-metadata`](https://www.npmjs.com/package/music-metadata). It's separate from `probeMedia` so callers only pay the extra ~1 MB fetch when they actually need duration.
+
+```typescript
+import { probeMedia, extractMediaDuration } from '@supadata/media-probe';
+
+const probe = await probeMedia(url);
+
+if (probe.isVideo || probe.isAudio) {
+  const { duration, method, container, bitrate } = await extractMediaDuration(url, {
+    // Pass hints from the cheap probe so we can bail early on unparseable
+    // content types without making a network call.
+    contentType: probe.contentType,
+    fileSize: probe.size,
+    // Re-use the same fetch (e.g. a proxied one) to keep egress consistent
+    // — useful when the CDN ip-binds signed URLs to the original fetcher.
+    fetch: myProxiedFetch,
+  });
+
+  if (duration !== null) {
+    console.log(`${duration}s — extracted via ${method} (${container})`);
+  }
+}
+```
+
+**Strategy:**
+
+1. **Head Range** (`bytes=0-1048575`): covers fast-start mp4, webm, mp3, m4a, ogg.
+2. **Head + Tail Range** (`bytes=(size-524288)-(size-1)`): fallback for mp4 with `moov` at end. Requires the `fileSize` hint.
+
+Never throws on extraction failure — returns `{duration: null, method: null}` so callers can fall back to their own heuristic.
+
 ## Supported Formats
 
 **Video:** MP4, WebM, MOV, AVI, MKV, OGV, MPEG, FLV, 3GP, WMV
 
 **Audio:** MP3, M4A, WAV, OGG, FLAC, AAC, Opus
+
+**Duration extraction** (`extractMediaDuration`): MP4/M4A/QuickTime, WebM, MP3, OGG/Opus, FLAC.
 
 ## Real-World Examples
 

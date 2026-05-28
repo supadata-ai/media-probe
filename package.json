@@ -1,7 +1,7 @@
 {
   "name": "@supadata/media-probe",
-  "version": "0.1.2",
-  "description": "Lightweight library for probing remote media assets to get their content type and size",
+  "version": "0.2.0",
+  "description": "Lightweight library for probing remote media assets — content type, size, and (opt-in) duration",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -27,6 +27,7 @@
     "probe",
     "content-type",
     "file-size",
+    "duration",
     "http",
     "range-request",
     "audio",
@@ -41,5 +42,8 @@
     "@types/node": "^20.0.0",
     "typescript": "^5.3.0",
     "vitest": "^1.0.0"
+  },
+  "dependencies": {
+    "music-metadata": "^11.12.3"
   }
 }
